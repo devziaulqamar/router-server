@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const port = 3000;
 const cors = require("cors"); // Import the cors library
+const axios = require('axios');
 
 app.use(cors());
 
@@ -32,29 +33,18 @@ app.get("/api/login", (req, res) => {
     });
 });
 
-
 // Define the /api/dashboard endpoint
-app.get('/api/dashboard', (req, res) => {
-    const requestOptions = {
-      method: 'GET',
-      redirect: 'follow',
-    };
-  
-    // Fetch call to the dashboard endpoint
-    fetch('http://192.168.0.1/jsonp_dashboard?callback=jQuery1113007059783700931699_1725598971804&_=1725598971808', requestOptions)
-      .then((response) => response.text())
-      .then((dashboardResult) => {
-        console.log('Dashboard Result:', dashboardResult); // Log the dashboard result
-        res.send(dashboardResult); // Send the result back to the client
-      })
-      .catch((error) => {
-        console.error('Error:', error); // Log any error
-        res.status(500).send('Error fetching dashboard data'); // Send an error response to the client
+app.get('/api/dashboard', async (req, res) => {
+    try {
+      const response = await axios.get('http://192.168.0.1/jsonp_dashboard?callback=jQuery1113007059783700931699_1725598971804&_=1725598971808', {
+        timeout: 10000 // 10 seconds timeout
       });
+      res.send(response.data);
+    } catch (error) {
+      console.error('Error:', error);
+      res.status(500).send('Error fetching dashboard data');
+    }
   });
-  
-  
-
 
 // Start the server
 app.listen(port, () => {
