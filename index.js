@@ -1,52 +1,90 @@
+// Import required modules
 const express = require("express");
+const axios = require("axios");
+const cors = require("cors");
+const bodyParser = require("body-parser");
+const fs = require("fs"); // Import file system module for logging
+
 const app = express();
-const port = 3000;
-const cors = require("cors"); // Import the cors library
-const axios = require('axios');
-
 app.use(cors());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json()); // For JSON body parsing
 
-// Define a simple GET API
-app.get("/api/hello", (req, res) => {
-  res.send("Hello, World!");
-});
+const port = process.env.PORT || 3001;
 
-app.get("/api/login", (req, res) => {
-  const requestOptions = {
-    method: "GET",
-    redirect: "follow",
-  };
-
-  // Call the external API using fetch
-  fetch(
-    "http://192.168.0.1/adminLogin?callback=jQuery1113004036848156300099_1725247431126&loginparam=%7B%22username%22%3A%22admin%22%2C%22password%22%3A%22admin%22%7D&_=1725247431128",
-    requestOptions
-  )
-    .then((response) => response.text())
-    .then((result) => {
-      console.log(result); // Log the result
-      res.send(result); // Send the result back to the client
-    })
-    .catch((error) => {
-      console.error("Error:", error); // Log any error
-      res.status(500).send("Error fetching data"); // Send an error response to the client
-    });
-});
-
-// Define the /api/dashboard endpoint
-app.get('/api/dashboard', async (req, res) => {
-    try {
-      const response = await axios.get('http://192.168.0.1/jsonp_dashboard?callback=jQuery1113007059783700931699_1725598971804&_=1725598971808', {
-        timeout: 10000 // 10 seconds timeout
-      });
-      res.send(response.data);
-    } catch (error) {
-      console.error('Error:', error);
-      res.status(500).send('Error fetching dashboard data');
+// Function to log messages to a file
+const logToFile = (message) => {
+  const logMessage = `[${new Date().toISOString()}] ${message}\n`;
+  fs.appendFileSync("request_logs.txt", logMessage, (err) => {
+    if (err) {
+      console.error("Error logging to file", err);
     }
   });
+};
+
+// GET endpoint to fetch product data
+app.get("/api/product", async (req, res) => {
+  try {
+    const response = await axios.get("https://dummyjson.com/products");
+    res.json(response.data);
+    logToFile(`Success: Fetched products from dummyjson API.`);
+  } catch (error) {
+    logToFile(`Error: Failed to fetch products - ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Default route
+app.get("/", (req, res) => {
+  const message = "Hello World!";
+  res.send(message);
+  logToFile(message);
+});
+
+// POST endpoint to create a product
+app.post("/api/createProduct", async (req, res) => {
+  try {
+    const { productName, price } = req.body;
+
+    // Check if productName and price are present in the request body
+    if (!productName || !price) {
+      throw new Error("productName and price are required");
+    }
+
+    console.log(`Creating product: ${productName} with price: ${price}`);
+
+    // Log the product creation action
+    logToFile(`Success: Created product '${productName}' with price ${price}.`);
+
+    // Send a success response
+    res.status(201).json({ message: "Product created successfully" });
+  } catch (error) {
+    logToFile(`Error: Failed to create product - ${error.message}`);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// NEW POST endpoint that logs every call
+app.post("/api/logEvent", (req, res) => {
+  try {
+    const { event, description } = req.body;
+
+    if (!event || !description) {
+      throw new Error("Event and description are required.");
+    }
+
+    // Log the event
+    logToFile(`Event: ${event}, Description: ${description}`);
+
+    // Send a success response
+    res.status(201).json({ message: "Event logged successfully" });
+  } catch (error) {
+    logToFile(`Error: Failed to log event - ${error.message}`);
+    res.status(400).json({ error: error.message });
+  }
+});
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+  console.log(`Server is running on port ${port}`);
 });
